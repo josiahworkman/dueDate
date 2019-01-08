@@ -1,14 +1,16 @@
 #!/bin/bash
 
-#########################################################################################################
-# This Script will look to JAMF Pro to see when a laptop is to be returned to the EBIO IT office
-# For the most part this requires a bunch of overhead work, creating two extension attributes for date
-# and another as a simple counter for the grace period.
-# This is intended to run once every day when a computer is dropped into a smart group. I think that should work...
+################################################################################
+# This Script will look to JAMF Pro to see when a laptop is to be returned to
+# the EBIO IT office For the most part this requires a bunch of overhead work,
+# creating two extension attributes for date and another as a simple counter for
+# the grace period. This is intended to run once every day when a computer is
+# dropped into a smart group. I think that should work...
 
-# Parameters are used to define the Encrypted Sting for the API Password, Return Date, Checkout Date. 
+# Parameters are used to define the Encrypted Sting for the API Password, Return
+# Date, Checkout Date.
 
-#########################################################################################################
+################################################################################
 
 #- Variables -#
 
@@ -22,16 +24,17 @@ daysLeft=7
 
 # Variables for Date and Grace Period
 # DD (Due Date) GP (Grace Period)
-#dd=$7
-#gp=$8
+DD=23
+GP=40
+encodedStr="U2FsdGVkX19IceMm4J5883SZLODUYcwZVFdxHqmJ5Ek=" # turn into parameter for JAMF
 
 #- Functions -#
 
 # Using Encrypted Bash Strings from brysontyrrell, thanks fam
 # Alternative format for DecryptString function
-# STRING TO PASS "U2FsdGVkX19IceMm4J5883SZLODUYcwZVFdxHqmJ5Ek="
 function DecryptString() {
     # Usage: ~$ DecryptString "Encrypted String"
+    # Salt and local Code generated in another file
     local SALT="4871e326e09e7cf3"
     local K="d5203ebbc10b79e4787711aa"
     echo "${1}" | /usr/bin/openssl enc -aes256 -d -a -A -S "$SALT" -k "$K"
@@ -39,7 +42,7 @@ function DecryptString() {
 # API Vars
 apiURL=https://panda.colorado.edu:8443/JSSResource
 apiUser=API
-apiPass=$(DecryptString U2FsdGVkX19IceMm4J5883SZLODUYcwZVFdxHqmJ5Ek=)
+apiPass=$(DecryptString $encodedStr)
 
 # Check for Serial Number
 function GetSN() {
@@ -55,13 +58,15 @@ function GetJamfID(){
 function GetDueDate(){
 	# Require argument $1 for comptuer's ID
 
-	# Command subsitiution 
+	# Command subsitiution
 	jssDue=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$1/subset/extension_attributes | xmllint --xpath "//*[id=23]/value/text()" -)
 	# If jssDue returns a zero length string, the following command will produce a string
 	# If jssDue has a value, it will return it's value to the command line
 	if [[ -z $jssDue ]]
 	then
 		echo "This computer ID does not have a vaild Due Date"
+    # The computer shouldnt have been in this smart group exit with error
+    exit 1
 	else
 		echo $jssDue
 		dueDate=$(date -j -f "%F" $jssDue +%s)
@@ -70,12 +75,14 @@ function GetDueDate(){
 
 #- Script Logic -#
 
-# Test of function - gets the due date of of a computer 
+# Test of function - gets the due date of of a computer
 # To run on a computer use the code below, for testing use JSSID 57
-#GetDueDate $(GetJamfID)
-GetDueDate 57
+GetDueDate $(GetJamfID)
+echo $(GetDueDate $(GetJamfID))
+#GetDueDate 57
+
 # Basic logic of the script, check if the jamf data suggests that the date is overdue.
-OverDueBy=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/57/subset/extension_attributes | xmllint --xpath "//*[id=40]/value/text()" -)
+OverDueBy=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes | xmllint --xpath "//*[id=40]/value/text()" -)
 if [[ $todayUnix -ge $dueDate ]]
 then
 	echo Compuer is past its loan date
@@ -91,9 +98,9 @@ then
             <value>$OverDueBy</value>
         </extension_attribute>
     </extension_attributes>
-</computer>	
+</computer>
 EOF
-	curl -sku $apiUser:$apiPass -H "Content-type: text/xml" $apiURL/computers/id/57/subset/extension_attributes -T /private/tmp/ea.xml -X PUT
+	curl -sku $apiUser:$apiPass -H "Content-type: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes -T /private/tmp/ea.xml -X PUT
 	fi
 
 	# Notify User: if we are within the grace peirod of 7 days, display this message
@@ -103,6 +110,7 @@ EOF
 	fi
 	# Lock computer if the grace period has expired
 		echo "Locking Computer with code 123456"
+
 else
 	echo computer $(GetSN) not overdue
 	# Check that the Overdue Day Extension Attribute is set to 0
@@ -120,7 +128,7 @@ else
     </extension_attributes>
 </computer>
 EOF
-	curl -sku $apiUser:$apiPass -H "Content-type: text/xml" $apiURL/computers/id/57/subset/extension_attributes -T /private/tmp/ea.xml -X PUT
+	curl -sku $apiUser:$apiPass -H "Content-type: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes -T /private/tmp/ea.xml -X PUT
 	fi
 fi
 exit 0
