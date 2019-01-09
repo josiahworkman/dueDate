@@ -2,7 +2,7 @@
 
 ################################################################################
 # This Script will look to JAMF Pro to see when a laptop is to be returned to
-# the EBIO IT office For the most part this requires a bunch of overhead work,
+# the IT office. For the most part this requires a bunch of overhead work,
 # creating two extension attributes for date and another as a simple counter for
 # the grace period. This is intended to run once every day when a computer is
 # dropped into a smart group. I think that should work...
@@ -24,9 +24,15 @@ daysLeft=7
 
 # Variables for Date and Grace Period
 # DD (Due Date) GP (Grace Period)
+# Due Date Ext ID
 DD=23
+# Grace Period Ext ID
 GP=40
-encodedStr="U2FsdGVkX19IceMm4J5883SZLODUYcwZVFdxHqmJ5Ek=" # turn into parameter for JAMF
+# parameter 4 in Jamf is the encoded string - needs to match salt and hash below
+# within DecryptString() function
+encodedStr="$4"
+# parameter 5 in Jamf - code to lock needs to be 6 digits.
+deviceLock="$5"
 
 #- Functions -#
 
@@ -73,6 +79,17 @@ function GetDueDate(){
 	fi
 }
 
+#- Sanity Check -#
+
+# Is the code from Jamf 6 digits?
+if [[ $deviceLock =~ ^[0-9]{6,6}$ ]]
+then
+  echo "code is valid"
+else
+  echo "code is invalid"
+  exit 1
+fi
+
 #- Script Logic -#
 
 # Test of function - gets the due date of of a computer
@@ -106,11 +123,14 @@ EOF
 	# Notify User: if we are within the grace peirod of 7 days, display this message
 	if [[ $((daysLeft-OverDueBy)) > 0 ]]
 	then
-		osascript -e 'tell app "System Events" to display dialog "This laptop needs to be returned to Ramaley N122D. This Computer will lock after: '$((daysLeft-OverDueBy))' days" buttons {"OK"} default button 1 with icon {"/usr/local/ebio/culogo.png"}'
-	fi
+		osascript -e 'tell app "System Events" to display dialog "This computer was scheduled to be returned to the EBIO IT office in Ramaley N122D by '$jssDue'. This computer will lock after: '$((daysLeft-OverDueBy))' days. Contact ebio-helpdesk@colorado.edu if you need assistance." buttons {"OK"} default button 1 with icon {"/usr/local/ebio/culogo.png"}'
+
+
+	else
 	# Lock computer if the grace period has expired
 		echo "Locking Computer with code 123456"
-
+    #curl -sku $apiUser:apiPass -H "Content-type: text/xml" $apiURL/computercommands/command/DeviceLock/passcode/$deviceLock/id/$(GetJamfID) -X POST
+  fi
 else
 	echo computer $(GetSN) not overdue
 	# Check that the Overdue Day Extension Attribute is set to 0
