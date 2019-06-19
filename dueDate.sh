@@ -28,7 +28,7 @@ loggedInUID=$(id -u "$loggedInUser")
 # before it's locked
 daysLeft=7
 
-# Variables for Date and Grace Period
+# Variables for Date and Grace Period: Replace with your own values
 # DD (Due Date) GP (Grace Period)
 # Due Date Ext ID
 DD=23
@@ -42,7 +42,7 @@ deviceLock="$5"
 
 #- Functions -#
 
-# Using Encrypted Bash Strings from brysontyrrell, thanks fam
+# Using Encrypted Bash Strings from brysontyrrell
 # Alternative format for DecryptString function
 function DecryptString() {
     # Usage: ~$ DecryptString "Encrypted String"
