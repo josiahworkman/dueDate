@@ -19,7 +19,10 @@ today=$(date +%Y-%m-%d) # - date format 2019-02-09 returned as 1549753755
 # Convert to Unix time for evaluation later in the script
 todayUnix=$(date -j -f "%F" $today +%s)
 
-currentUser=$(ls -l /dev/console | awk '{ print $3 }')
+## Get the logged in user's name
+loggedInUser=$( ls -l /dev/console | awk '{print $3}' )
+## Get the UID of the logged in user
+loggedInUID=$(id -u "$loggedInUser")
 
 # This var is the number of days the loaner computer can go past it's Due Date
 # before it's locked
@@ -126,7 +129,8 @@ EOF
 	# Notify User: if we are within the grace peirod of 7 days, display this message
 	if [[ $((daysLeft-OverDueBy)) > 0 ]]
 	then
-		sudo -u ${currentUser} osascript -e 'tell app "System Events" to display dialog "This computer was scheduled to be returned to the EBIO IT office in Ramaley N122D by '$jssDue'. This computer will lock after: '$((daysLeft-OverDueBy))' days. Contact ebio-helpdesk@colorado.edu if you need assistance." buttons {"OK"} default button 1 with icon {"/usr/local/ebio/culogo.png"}'
+    echo notifying user of their due date
+    /bin/launchctl asuser "${loggedInUID}" sudo -iu "${loggedInUser}" /usr/bin/osascript -e 'tell application "System Events" to display dialog "This computer was scheduled to be returned to the EBIO IT office in Ramaley N122D by '$jssDue'. This computer will lock after: '$((daysLeft-OverDueBy))' days. Contact ebio-helpdesk@colorado.edu if you need assistance." buttons {"OK"} default button 1 with icon {"/usr/local/ebio/culogo.png"}'
 	else
 	# Lock computer if the grace period has expired
 		echo "Locking Computer with code 123456"
