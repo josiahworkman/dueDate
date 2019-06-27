@@ -86,7 +86,6 @@ function GetDueDate(){
 }
 
 #- Sanity Check -#
-
 # Is the code from Jamf 6 digits?
 if [[ $deviceLock =~ ^[0-9]{6,6}$ ]]
 then
