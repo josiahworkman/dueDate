@@ -19,6 +19,8 @@ today=$(date +%Y-%m-%d) # - date format 2019-02-09 returned as 1549753755
 # Convert to Unix time for evaluation later in the script
 todayUnix=$(date -j -f "%F" $today +%s)
 
+# https://www.jamf.com/jamf-nation/discussions/27299/calling-osascript-not-working-in-high-sierra
+# run osascripts as a user from jamf script
 ## Get the logged in user's name
 loggedInUser=$( ls -l /dev/console | awk '{print $3}' )
 ## Get the UID of the logged in user
@@ -29,20 +31,23 @@ loggedInUID=$(id -u "$loggedInUser")
 daysLeft=7
 
 # Variables for Date and Grace Period: Replace with your own values
-# DD (Due Date) GP (Grace Period)
-# Due Date Ext ID
-DD=23
-# Grace Period Ext ID
-GP=40
 # parameter 4 in Jamf is the encoded string - needs to match salt and hash below
 # within DecryptString() function
 encodedStr="$4"
 # parameter 5 in Jamf - code to lock needs to be 6 digits.
 deviceLock="$5"
+# DD (Due Date) GP (Grace Period)
+# Due Date Ext ID: 23 for testing
+# paramater 6 in Jamf - extension attribute id of loan return date
+DD="$6"
+# paramater 7 in Jamf - extension attribute id of days left in grace period
+# Grace Period Ext ID: 40 for testing
+GP="$7"
 
 #- Functions -#
 
-# Using Encrypted Bash Strings from brysontyrrell
+# Using Encrypted Bash Strings from brysontyrrell just using openssl to encrypt  
+# and decrypt password values
 # Alternative format for DecryptString function
 function DecryptString() {
     # Usage: ~$ DecryptString "Encrypted String"
@@ -71,7 +76,7 @@ function GetDueDate(){
 	# Require argument $1 for comptuer's ID
 
 	# Command subsitiution
-	jssDue=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$1/subset/extension_attributes | xmllint --xpath "//*[id=23]/value/text()" -)
+	jssDue=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$1/subset/extension_attributes | xmllint --xpath "//*[id=$DD]/value/text()" -)
 	# If jssDue returns a zero length string, the following command will produce a string
 	# If jssDue has a value, it will return it's value to the command line
 	if [[ -z $jssDue ]]
@@ -104,7 +109,7 @@ echo $(GetDueDate $(GetJamfID))
 #GetDueDate 57
 
 # Basic logic of the script, check if the jamf data suggests that the date is overdue.
-OverDueBy=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes | xmllint --xpath "//*[id=40]/value/text()" -)
+OverDueBy=$(curl -sku $apiUser:$apiPass -H "Accept: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes | xmllint --xpath "//*[id=$GP]/value/text()" -)
 if [[ $todayUnix -ge $dueDate ]]
 then
 	echo Compuer is past its loan date
@@ -116,7 +121,7 @@ then
 <computer>
     <extension_attributes>
         <extension_attribute>
-            <id>40</id>
+            <id>$GP</id>
             <value>$OverDueBy</value>
         </extension_attribute>
     </extension_attributes>
@@ -144,12 +149,12 @@ else
 	# Create xml file to copy the data to JAMF
     cat << EOF > /private/tmp/ea.xml
 <computer>
-    <extension_attributes>
-        <extension_attribute>
-            <id>40</id>
-            <value>0</value>
-        </extension_attribute>
-    </extension_attributes>
+	<extension_attributes>
+		<extension_attribute>
+			<id>$GP</id>
+			<value>0</value>
+		</extension_attribute>
+	</extension_attributes>
 </computer>
 EOF
 	curl -sku $apiUser:$apiPass -H "Content-type: text/xml" $apiURL/computers/id/$(GetJamfID)/subset/extension_attributes -T /private/tmp/ea.xml -X PUT
