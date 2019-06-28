@@ -1,9 +1,14 @@
 # Due Date
-A brute force method for requiring users to return checkout laptops. This is a script used in conjunction with JAMF to "encourage" users to return their laptops on time. This project was created as a learning experience after taking the JAMF 300 certification course.
+This is a script used in conjunction with JAMF to "encourage" users to return loaned laptops on time. This project served as a experience and extends on scripts and API calls I used after completing the JAMF 300 certification course.
+![extension attribute example](ex.png "extension attribute example")
 
-It became necessary to implement some sort of automatic notifying system after I had loaned out over ten laptops. Keeping track of dates in JAMF and emailing users when their loan period expired was needlessly complicated. This project attempts to automate as much of that process as possible.
+It became necessary to implement some sort of automatic notification system after I had loaned out over ten laptops. One could use smart groups, extension attibutes and JAMF notifications to do the exact same work. Keeping track of dates in JAMF and emailing users when their loan period expired was needlessly complicated. I wanted to practice using API calls to perform some sort of task based on data from my local jamf server. 
 
-When a laptop is loaned out to a user, I now assign their username to the laptop within JAMF. In addition, I set the agreed upon return date to an extension attribute. After that date the user (or any user of that laptop) is notified to return the laptop. After seven days the laptop is locked and if a user hasn't returned the laptop within the grace period they certainly walk into the office with the locked laptop.
+## How does it work?
+
+When a laptop is loaned to a user, their username and the agreed upon return date are saved to the asset in JAMF. 
+
+If the laptop is not reutned by that saved date, the logged in user is notified to return the laptop. After seven days the laptop is locked and if a user hasn't returned the laptop within the grace period they certainly walk into the office with the locked laptop.
 
 If the laptop is not past it's due date the script just executes and submits a log to JAMF.
 

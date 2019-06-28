@@ -57,7 +57,7 @@ function DecryptString() {
     echo "${1}" | /usr/bin/openssl enc -aes256 -d -a -A -S "$SALT" -k "$K"
 }
 # API Vars
-apiURL=https://panda.colorado.edu:8443/JSSResource
+apiURL=https://jamfpro.example.edu:8443/JSSResource
 apiUser=API
 apiPass=$(DecryptString $encodedStr)
 
