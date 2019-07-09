@@ -5,7 +5,7 @@
 # the IT office. For the most part this requires a bunch of overhead work,
 # creating two extension attributes for date and another as a simple counter for
 # the grace period. This is intended to run once every day when a computer is
-# dropped into a smart group. I think that should work...
+# dropped into a smart group. 
 
 # Parameters are used to define the Encrypted Sting for the API Password, Return
 # Date, Checkout Date.
