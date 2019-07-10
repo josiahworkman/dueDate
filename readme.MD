@@ -1,5 +1,6 @@
 # Due Date
 This is a script used in conjunction with JAMF to "encourage" users to return loaned laptops on time. This project served as a learning experience. It extends working knowledge on scripts and API calls I used after completing the JAMF 300 certification course.
+
 ![extension attribute example](ex.png "extension attribute example")
 
 It became necessary to implement some sort of automatic notification system after I had loaned out over ten laptops. Keeping track of dates in JAMF and emailing users when their loan period expired was needlessly complicated. I wanted to practice using API calls to perform some sort of task based on data from my JAMF Pro server. 
